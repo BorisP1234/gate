@@ -13,6 +13,7 @@ import (
 	"github.com/robinbraemer/event"
 
 	cfgpacket "go.minekube.com/gate/pkg/edition/java/proto/packet/config"
+	"go.minekube.com/gate/pkg/edition/java/proto/packet/cookie"
 	"go.minekube.com/gate/pkg/edition/java/proto/state"
 	"go.minekube.com/gate/pkg/edition/java/proto/state/states"
 	"go.minekube.com/gate/pkg/edition/java/proxy/internal/resourcepack"
@@ -23,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.minekube.com/common/minecraft/component"
 	"go.minekube.com/common/minecraft/component/codec/legacy"
+	"go.minekube.com/common/minecraft/key"
 	"go.uber.org/atomic"
 
 	"go.minekube.com/gate/pkg/edition/java/config"
@@ -108,6 +110,11 @@ type Player interface { // TODO convert to struct(?) bc this is a lot of methods
 	//
 	// Deprecated: Use PendingResourcePacks instead.
 	PendingResourcePack() *ResourcePackInfo
+
+	StoreCookie(key key.Key, payload []byte) error
+
+	// Sends request for a cookie which the player will respond to in the PlayerCookieResponseEvent if he has the cookie
+	RequestCookie(key key.Key) error
 }
 
 type connectedPlayer struct {
@@ -734,4 +741,41 @@ func (p *connectedPlayer) BackendInFlight() proto.PacketWriter {
 		}
 	}
 	return nil
+}
+
+func (p *connectedPlayer) StoreCookie(key key.Key, payload []byte) error {
+	if strings.TrimSpace(key.String()) == "" {
+		return errors.New("empty key")
+	}
+
+	if len(payload) > 5*1024 {
+		return errors.New("payload size exceeds 5 kiB")
+	}
+
+	if p.Protocol().Lower(version.Minecraft_1_20_5) {
+		return fmt.Errorf("%w: but player is on %s", ErrTransferUnsupportedClientProtocol, p.Protocol())
+	}
+
+	if p.State() != state.Play && p.State() != state.Config {
+		return errors.New("CookieStore packet can only be send in the Play and Configuration State")
+	}
+
+	return p.WritePacket(&cookie.CookieStore{
+		Key:     key,
+		Payload: payload,
+	})
+}
+
+func (p *connectedPlayer) RequestCookie(key key.Key) error {
+	if strings.TrimSpace(key.String()) == "" {
+		return errors.New("empty key")
+	}
+
+	if p.Protocol().Lower(version.Minecraft_1_20_5) {
+		return fmt.Errorf("%w: but player is on %s", ErrTransferUnsupportedClientProtocol, p.Protocol())
+	}
+
+	return p.WritePacket(&cookie.CookieRequest{
+		Key: key,
+	})
 }

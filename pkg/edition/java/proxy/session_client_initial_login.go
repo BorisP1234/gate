@@ -5,11 +5,14 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
-	"go.minekube.com/gate/pkg/edition/java/proto/state"
 	"regexp"
 	"time"
 
+	"go.minekube.com/gate/pkg/edition/java/proto/packet/cookie"
+	"go.minekube.com/gate/pkg/edition/java/proto/state"
+
 	"github.com/go-logr/logr"
+	"github.com/robinbraemer/event"
 	"go.minekube.com/common/minecraft/color"
 	"go.minekube.com/common/minecraft/component"
 	"go.minekube.com/gate/pkg/edition/java/netmc"
@@ -79,6 +82,8 @@ func (l *initialLoginSessionHandler) HandlePacket(p *proto.PacketContext) {
 		_ = l.inbound.handleLoginPluginResponse(t)
 	case *packet.EncryptionResponse:
 		l.handleEncryptionResponse(t)
+	case *cookie.CookieResponse:
+		l.handleCookieResponse(t)
 	default:
 		// got unexpected packet, simply close
 		_ = l.conn.Close()
@@ -370,4 +375,8 @@ func (l *initialLoginSessionHandler) assertState(expectedState loginState) bool 
 		"expectedState", expectedState)
 	_ = l.conn.Close()
 	return false
+}
+
+func (l *initialLoginSessionHandler) handleCookieResponse(p *cookie.CookieResponse) {
+	event.FireParallel(l.eventMgr, newPlayerCookieResponseEvent(nil, p.Key, p.Payload))
 }

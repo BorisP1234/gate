@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"go.minekube.com/gate/pkg/edition/java/proto/packet/config"
+	"go.minekube.com/gate/pkg/edition/java/proto/packet/cookie"
 	"go.minekube.com/gate/pkg/edition/java/proxy/tablist"
 	"go.minekube.com/gate/pkg/internal/future"
 
@@ -113,6 +114,8 @@ func (c *clientPlaySessionHandler) HandlePacket(pc *proto.PacketContext) {
 		c.handleFinishedUpdate(p)
 	case *chat.ChatAcknowledgement:
 		c.handleChatAcknowledgement(p)
+	case *cookie.CookieResponse:
+		c.handleCookieResponse(p)
 	default:
 		c.forwardToServer(pc)
 	}
@@ -825,6 +828,10 @@ func (c *clientPlaySessionHandler) handleChatAcknowledgement(p *chat.ChatAcknowl
 		return
 	}
 	c.player.chatQueue.HandleAcknowledgement(p.Offset)
+}
+
+func (c *clientPlaySessionHandler) handleCookieResponse(p *cookie.CookieResponse) {
+	event.FireParallel(c.player.eventMgr, newPlayerCookieResponseEvent(c.player, p.Key, p.Payload))
 }
 
 // doSwitch handles switching stages for swapping between servers.

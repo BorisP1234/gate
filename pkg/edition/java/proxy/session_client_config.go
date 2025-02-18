@@ -2,10 +2,12 @@ package proxy
 
 import (
 	"bytes"
+
 	"github.com/go-logr/logr"
 	"github.com/robinbraemer/event"
 	"go.minekube.com/gate/pkg/edition/java/proto/packet"
 	"go.minekube.com/gate/pkg/edition/java/proto/packet/config"
+	"go.minekube.com/gate/pkg/edition/java/proto/packet/cookie"
 	"go.minekube.com/gate/pkg/edition/java/proto/packet/plugin"
 	"go.minekube.com/gate/pkg/edition/java/proto/state"
 	"go.minekube.com/gate/pkg/edition/java/proto/util"
@@ -67,6 +69,8 @@ func (h *clientConfigSessionHandler) HandlePacket(pc *proto.PacketContext) {
 		}
 	case *config.KnownPacks:
 		h.handleKnownPacks(p, pc)
+	case *cookie.CookieResponse:
+		h.handleCookieResponse(p)
 	default:
 		forwardToServer(pc, h.player)
 	}
@@ -140,4 +144,8 @@ func (h *clientConfigSessionHandler) handleKnownPacks(p *config.KnownPacks, pc *
 
 func (h *clientConfigSessionHandler) event() event.Manager {
 	return h.player.proxy.Event()
+}
+
+func (h *clientConfigSessionHandler) handleCookieResponse(p *cookie.CookieResponse) {
+	event.FireParallel(h.event(), newPlayerCookieResponseEvent(h.player, p.Key, p.Payload))
 }
