@@ -127,6 +127,12 @@ func init() {
 	Config.ClientBound.Register(&cookie.CookieStore{},
 		m(0x0A, version.Minecraft_1_20_5),
 	)
+	Config.ClientBound.Register(&p.DialogClear{},
+		m(0x11, version.Minecraft_1_21_6),
+	)
+	Config.ClientBound.Register(&p.DialogShow{},
+		m(0x12, version.Minecraft_1_21_6),
+	)
 
 	Login.ServerBound.Register(&p.ServerLogin{},
 		m(0x00, version.Minecraft_1_7_2))
@@ -621,6 +627,7 @@ func init() {
 	)
 	Play.ClientBound.Register(&p.ServerLinks{},
 		m(0x7B, version.Minecraft_1_21),
+		m(0x82, version.Minecraft_1_21_2),
 	)
 	Play.ClientBound.Register(&cookie.CookieRequest{},
 		m(0x16, version.Minecraft_1_20_5),
